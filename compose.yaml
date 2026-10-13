@@ -1,0 +1,56 @@
+name: researchlens-ai
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: researchlens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-researchlens}
+      POSTGRES_DB: researchlens
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U researchlens"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+asyncpg://researchlens:${POSTGRES_PASSWORD:-researchlens}@postgres:5432/researchlens
+      UPLOAD_DIR: /app/data/uploads
+      VECTOR_INDEX_DIR: /app/data/vector_indexes
+      HF_HOME: /app/data/model_cache
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3.8-27b}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      API_TOKEN: ${API_TOKEN:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      CORS_ORIGINS: http://localhost:3000
+    ports: ["8000:8000"]
+    volumes: ["research_data:/app/data"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    ports: ["3000:3000"]
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  postgres_data:
+  research_data:

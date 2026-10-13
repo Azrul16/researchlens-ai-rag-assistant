@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+aiosqlite
+asyncpg
+alembic
+pydantic-settings
+python-multipart
+pymupdf
+httpx
+pytest
+pytest-asyncio
+ruff
+sentence-transformers
+faiss-cpu
+filelock
+tiktoken
